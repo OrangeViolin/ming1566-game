@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大明王朝1566 · 沉浸式权谋RPG</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse{0%,100%{text-shadow:0 0 10px rgba(212,175,55,.5)}50%{text-shadow:0 0 25px rgba(212,175,55,.9)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@keyframes breathe{0%,100%{box-shadow:0 0 15px rgba(212,175,55,.2)}50%{box-shadow:0 0 30px rgba(212,175,55,.5)}}
+@keyframes inkDrop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+@keyframes floatUp{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-60px)}}
+body{font-family:'Noto Serif SC','Songti SC','STSong',serif;background:#0a0a0f;color:#d4c5a0;min-height:100vh;overflow-x:hidden}
+#app{max-width:900px;margin:0 auto;padding:20px;min-height:100vh}
+.screen{display:none;animation:fadeIn .6s ease}.screen.active{display:block}
+h1{text-align:center;font-size:2.8em;color:#d4af37;padding:40px 0 10px;animation:pulse 3s infinite;letter-spacing:12px}
+h2{text-align:center;font-size:1.1em;color:#8a7a5a;margin-bottom:40px;letter-spacing:6px}
+.subtitle{text-align:center;color:#665;font-size:.9em;margin-bottom:30px}
+/* Character Select */
+.char-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin:20px 0}
+.char-card{background:linear-gradient(145deg,#1a1a2e,#16213e);border:1px solid #333;border-radius:8px;padding:20px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+.char-card:hover{border-color:#d4af37;transform:translateY(-4px);box-shadow:0 8px 25px rgba(212,175,55,.2)}
+.char-card.selected{border-color:#d4af37;background:linear-gradient(145deg,#2a1a1e,#1e2a3e)}
+.char-name{font-size:1.4em;color:#d4af37;margin-bottom:6px}
+.char-title{font-size:.8em;color:#8a7a5a;margin-bottom:10px}
+.char-desc{font-size:.85em;color:#998;line-height:1.6}
+.faction-tag{display:inline-block;font-size:.7em;padding:2px 8px;border-radius:3px;margin-top:8px}
+.faction-yan{background:#4a1a1a;color:#e55}
+.faction-qing{background:#1a3a4a;color:#5ae}
+.faction-huang{background:#4a3a1a;color:#ea5}
+.faction-jun{background:#1a4a2a;color:#5e5}
+.faction-shang{background:#3a2a4a;color:#a5e}
+.faction-du{background:#2a2a2a;color:#aaa}
+/* Stats */
+.stats-bar{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+.stat{flex:1;min-width:70px;text-align:center}
+.stat-label{font-size:.7em;color:#776}
+.stat-val{font-size:1.3em;color:#d4af37;font-weight:bold}
+.stat-bar{height:4px;background:#222;border-radius:2px;margin-top:3px;overflow:hidden}
+.stat-fill{height:100%;border-radius:2px;transition:width .5s}
+.stat-fill.pol{background:linear-gradient(90deg,#e55,#d4af37)}
+.stat-fill.mil{background:linear-gradient(90deg,#55e,#5ae)}
+.stat-fill.int{background:linear-gradient(90deg,#5e5,#ae5)}
+.stat-fill.vir{background:linear-gradient(90deg,#ea5,#fff)}
+.stat-fill.cha{background:linear-gradient(90deg,#e5a,#d4af37)}
+/* Game UI */
+.game-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#111;border:1px solid #2a2a2a;border-radius:8px;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.player-info{display:flex;align-items:center;gap:12px}
+.player-name{color:#d4af37;font-size:1.1em}
+.hp-bar{width:120px;height:8px;background:#222;border-radius:4px;overflow:hidden}
+.hp-fill{height:100%;background:linear-gradient(90deg,#e22,#e55);border-radius:4px;transition:width .5s}
+.resource-info{display:flex;gap:16px;font-size:.85em}
+.resource-info span{color:#8a7a5a}
+.resource-info strong{color:#d4af37}
+.chapter-title{text-align:center;font-size:1.6em;color:#d4af37;padding:20px 0 8px;letter-spacing:4px;animation:inkDrop .8s ease}
+.scene-text{background:#111118;border-left:3px solid #d4af37;padding:20px 24px;margin:16px 0;line-height:2;font-size:1.05em;border-radius:0 8px 8px 0;animation:slideIn .5s ease}
+.scene-text p{margin-bottom:12px}
+.dialogue{margin:12px 0;padding:12px 16px;border-radius:8px;animation:slideIn .4s ease}
+.dialogue .speaker{font-weight:bold;margin-bottom:4px;font-size:.95em}
+.dialogue .words{font-style:italic;line-height:1.8;color:#c5b88a}
+.dialogue.emperor{background:#1a1508;border-left:3px solid #d4af37}.dialogue.emperor .speaker{color:#d4af37}
+.dialogue.official{background:#0a1520;border-left:3px solid #5ae}.dialogue.official .speaker{color:#5ae}
+.dialogue.villain{background:#200a0a;border-left:3px solid #e55}.dialogue.villain .speaker{color:#e55}
+.dialogue.self{background:#0a200a;border-left:3px solid #5e5}.dialogue.self .speaker{color:#5e5}
+.dialogue.neutral{background:#151518;border-left:3px solid #888}.dialogue.neutral .speaker{color:#aaa}
+/* Choices */
+.choices{margin:20px 0}
+.choice-btn{display:block;width:100%;text-align:left;padding:16px 20px;margin:10px 0;background:#111;border:1px solid #333;border-radius:8px;color:#d4c5a0;font-size:1em;cursor:pointer;transition:all .3s;font-family:inherit;line-height:1.6;position:relative}
+.choice-btn:hover{border-color:#d4af37;background:#1a1a28;transform:translateX(8px)}
+.choice-btn:active{transform:translateX(4px)}
+.choice-tag{font-size:.75em;color:#d4af37;margin-right:8px}
+.choice-effect{font-size:.75em;color:#665;margin-top:4px;display:block}
+/* Buttons */
+.btn{display:inline-block;padding:12px 36px;background:linear-gradient(145deg,#d4af37,#b8962e);color:#0a0a0f;font-size:1.1em;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:bold;letter-spacing:2px;transition:all .3s}
+.btn:hover{transform:scale(1.05);box-shadow:0 4px 20px rgba(212,175,55,.4)}
+.btn-center{text-align:center;margin:30px 0}
+/* Combat */
+.combat-arena{background:#0a0a18;border:1px solid #333;border-radius:12px;padding:24px;margin:16px 0}
+.combat-title{text-align:center;color:#e55;font-size:1.3em;margin-bottom:16px;letter-spacing:4px}
+.combatants{display:flex;justify-content:space-around;align-items:center;margin:16px 0;flex-wrap:wrap;gap:16px}
+.combatant{text-align:center;min-width:120px}
+.combatant .name{font-size:1.1em;margin-bottom:8px}
+.combatant .name.ally{color:#5ae}
+.combatant .name.enemy{color:#e55}
+.vs{font-size:2em;color:#d4af37;animation:pulse 2s infinite}
+.combat-log{background:#080810;padding:12px;border-radius:6px;max-height:200px;overflow-y:auto;font-size:.85em;line-height:1.8;margin:12px 0}
+.combat-log p{margin:4px 0}
+.dmg{color:#e55}.heal{color:#5e5}.info{color:#ea5}.crit{color:#d4af37;font-weight:bold}
+/* Notification */
+.notification{position:fixed;top:20px;right:20px;padding:14px 24px;border-radius:8px;font-size:.95em;z-index:100;animation:fadeIn .3s ease;max-width:320px}
+.notification.gain{background:#1a3a1a;border:1px solid #5e5;color:#5e5}
+.notification.loss{background:#3a1a1a;border:1px solid #e55;color:#e55}
+.notification.event{background:#3a3a1a;border:1px solid #ea5;color:#ea5}
+.float-text{position:fixed;font-size:1.2em;font-weight:bold;pointer-events:none;z-index:200;animation:floatUp 1.5s ease forwards}
+/* Faction Panel */
+.faction-panel{background:#111;border:1px solid #2a2a2a;border-radius:8px;padding:16px;margin:16px 0}
+.faction-panel h3{color:#d4af37;margin-bottom:12px;font-size:1em}
+.faction-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #1a1a1a;font-size:.9em}
+.faction-row .fname{color:#998}
+.faction-row .fval{font-weight:bold}
+.fval.hostile{color:#e55}.fval.cold{color:#e95}.fval.neutral{color:#ea5}.fval.warm{color:#ae5}.fval.ally{color:#5e5}
+/* End Screen */
+.ending{text-align:center;padding:40px 20px}
+.ending h2{color:#d4af37;font-size:2em;margin-bottom:20px;animation:pulse 3s infinite}
+.ending p{line-height:2;font-size:1.1em;margin:8px 0}
+.ending .score{font-size:3em;color:#d4af37;margin:20px 0}
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#111}::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+/* Mobile */
+@media(max-width:600px){h1{font-size:1.8em;letter-spacing:6px}.char-grid{grid-template-columns:1fr}.game-header{flex-direction:column}}
+</style>
+</head>
+<body>
+<div id="app">
+<!-- Title Screen -->
+<div id="screen-title" class="screen active">
+<h1>大明王朝</h1>
+<h2>嘉靖与海瑞</h2>
+<p class="subtitle">沉浸式权谋RPG · 选你的角色 · 做你的选择 · 改写历史</p>
+<div class="btn-center"><button class="btn" onclick="showScreen('screen-select')">开 始 游 戏</button></div>
+<div style="text-align:center;margin-top:40px;color:#443;font-size:.8em;line-height:2">
+<p>基于刘和平《大明王朝1566》</p>
+<p>八大角色 · 多线剧情 · 权谋博弈 · 沙场征伐</p>
+</div>
+</div>
+
+<!-- Character Select -->
+<div id="screen-select" class="screen">
+<h1 style="font-size:1.8em;padding:20px 0">选择你的角色</h1>
+<p class="subtitle">每个角色拥有独特能力与起始剧情，你的选择将改写大明国运</p>
+<div class="char-grid" id="charGrid"></div>
+<div class="btn-center"><button class="btn" id="btnStart" onclick="startGame()" style="opacity:.3;pointer-events:none">进 入 大 明</button></div>
+</div>
+
+<!-- Game Screen -->
+<div id="screen-game" class="screen">
+<div class="game-header">
+<div class="player-info">
+<span class="player-name" id="gName"></span>
+<div class="hp-bar"><div class="hp-fill" id="gHpBar" style="width:100%"></div></div>
+<span id="gHpText" style="font-size:.8em;color:#e55"></span>
+</div>
+<div class="resource-info">
+<span>声望 <strong id="gRep">50</strong></span>
+<span>银两 <strong id="gGold">100</strong></span>
+<span>章回 <strong id="gChapter">一</strong></span>
+</div>
+</div>
+<div id="gameContent"></div>
+</div>
+
+<!-- End Screen -->
+<div id="screen-end" class="screen">
+<div class="ending" id="endContent"></div>
+</div>
+</div>
+
+<script>
+// ===== CHARACTER DATA =====
+const CHARS = [
+  {id:'jiajing',name:'嘉靖帝',title:'朱厚熜 · 御极四十五年',
+   desc:'二十年不上朝，却将天下玩弄于股掌之间。修玄问道，以算盘治国。你是这盘棋的执棋之人。',
+   faction:'emperor',tag:'帝王',tagClass:'faction-huang',
+   stats:{pol:95,mil:30,int:98,vir:20,cha:70},hp:80,gold:500,rep:90,
+   ability:'天子一怒：可直接罢免任意官员，但损失声望'},
+  {id:'hairui',name:'海 瑞',title:'海刚峰 · 淳安知县',
+   desc:'天下第一直臣。以命相搏，以笔为刀。清廉至极，执拗到底。你是这浊世中唯一的清流。',
+   faction:'qingliu',tag:'清流',tagClass:'faction-qing',
+   stats:{pol:60,mil:40,int:80,vir:100,cha:85},hp:100,gold:10,rep:70,
+   ability:'铁骨铮铮：面对威胁时清廉值越高，抵抗力越强'},
+  {id:'yansong',name:'严 嵩',title:'严惟中 · 内阁首辅',
+   desc:'把持朝政二十年的青词宰相。门生故吏遍天下，一人之下万人之上。你要守住这权倾朝野的帝国。',
+   faction:'yandang',tag:'严党',tagClass:'faction-yan',
+   stats:{pol:98,mil:20,int:90,vir:10,cha:60},hp:60,gold:800,rep:60,
+   ability:'权倾朝野：可调动严党官员为你办事，消耗银两'},
+  {id:'huzongxian',name:'胡宗宪',title:'胡汝贞 · 浙直总督',
+   desc:'严嵩门生，却心系苍生。抗倭名臣，两难之间。在恩师与百姓之间，你将如何抉择？',
+   faction:'yandang',tag:'严党/独立',tagClass:'faction-du',
+   stats:{pol:85,mil:85,int:88,vir:70,cha:80},hp:90,gold:200,rep:75,
+   ability:'总督令：可调动戚家军参战，军事判定加成'},
+  {id:'lvfang',name:'吕 芳',title:'老祖宗 · 司礼监掌印',
+   desc:'掌管十万太监的内廷第一人。在皇帝与群臣之间走钢丝，一步错便粉身碎骨。',
+   faction:'huangguan',tag:'内廷',tagClass:'faction-huang',
+   stats:{pol:90,mil:15,int:92,vir:50,cha:75},hp:70,gold:300,rep:80,
+   ability:'三思之道：每次选择前可预览结果倾向'},
+  {id:'qijiguang',name:'戚继光',title:'戚元敬 · 抗倭名将',
+   desc:'鸳鸯阵破倭寇，戚家军威震东南。你的战场不在朝堂，而在刀光剑影之间。大杀四方，舍我其谁！',
+   faction:'military',tag:'军方',tagClass:'faction-jun',
+   stats:{pol:40,mil:100,int:75,vir:80,cha:90},hp:120,gold:50,rep:65,
+   ability:'鸳鸯阵：战斗时伤害翻倍，可连续行动'},
+  {id:'shenyishi',name:'沈一石',title:'江南首富 · 织造局商人',
+   desc:'以商入官，以官养商。手握江南丝绸命脉，却不过是权力的棋子。你能否以财破局？',
+   faction:'shang',tag:'商人',tagClass:'faction-shang',
+   stats:{pol:50,mil:10,int:82,vir:30,cha:65},hp:60,gold:2000,rep:40,
+   ability:'金钱开路：可用银两贿赂官员、收买情报'},
+  {id:'zhangjuzheng',name:'张居正',title:'张叔大 · 兵部侍郎',
+   desc:'年轻的国器之才。韬光养晦，等待时机。未来的万历首辅，此刻正蛰伏于暗处。',
+   faction:'qingliu',tag:'清流',tagClass:'faction-qing',
+   stats:{pol:88,mil:50,int:95,vir:65,cha:78},hp:90,gold:100,rep:55,
+   ability:'国器之才：政治和智谋判定时有额外加成'}
+];
+
+// ===== GAME STATE =====
+let G = {
+  char: null, hp: 100, maxHp: 100, gold: 100, rep: 50,
+  stats: {}, chapter: 0, scene: 0, flags: {},
+  kills: 0, decisions: 0, victories: 0,
+  factions: { emperor: 50, yandang: 50, qingliu: 50, huangguan: 50, military: 50, people: 50 }
+};
+
+// ===== UI HELPERS =====
+function $(id) { return document.getElementById(id); }
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function notify(text, type='event') {
+  const n = document.createElement('div');
+  n.className = 'notification ' + type;
+  n.textContent = text;
+  document.body.appendChild(n);
+  setTimeout(() => n.remove(), 2500);
+}
+
+function floatText(text, color='#d4af37') {
+  const f = document.createElement('div');
+  f.className = 'float-text';
+  f.style.color = color;
+  f.style.left = (100 + Math.random() * 300) + 'px';
+  f.style.top = (200 + Math.random() * 200) + 'px';
+  f.textContent = text;
+  document.body.appendChild(f);
+  setTimeout(() => f.remove(), 1500);
+}
+
+function updateUI() {
+  $('gName').textContent = G.char.name;
+  $('gHpBar').style.width = Math.max(0, G.hp / G.maxHp * 100) + '%';
+  $('gHpText').textContent = G.hp + '/' + G.maxHp;
+  $('gRep').textContent = G.rep;
+  $('gGold').textContent = G.gold;
+  const cnames = ['一','二','三','四','五','六','七','八','九','十'];
+  $('gChapter').textContent = cnames[G.chapter] || '终';
+}
+
+function modStat(key, val) {
+  if (key === 'hp') { G.hp = Math.min(G.maxHp, Math.max(0, G.hp + val)); }
+  else if (key === 'gold') { G.gold = Math.max(0, G.gold + val); }
+  else if (key === 'rep') { G.rep = Math.max(0, Math.min(100, G.rep + val)); }
+  if (val > 0) floatText((key==='hp'?'生命':key==='gold'?'银两':key==='rep'?'声望':key) + ' +' + val, '#5e5');
+  else floatText((key==='hp'?'生命':key==='gold'?'银两':key==='rep'?'声望':key) + ' ' + val, '#e55');
+  updateUI();
+}
+
+function modFaction(f, val) {
+  G.factions[f] = Math.max(0, Math.min(100, G.factions[f] + val));
+  const names = {emperor:'帝心',yandang:'严党',qingliu:'清流',huangguan:'内廷',military:'军方',people:'民心'};
+  if (val > 0) notify(names[f] + '好感 +' + val, 'gain');
+  else notify(names[f] + '好感 ' + val, 'loss');
+}
+
+function checkStat(stat, threshold) {
+  return (G.stats[stat] || 0) + Math.floor(Math.random() * 20) >= threshold;
+}
+
+// ===== CHARACTER SELECT =====
+let selectedChar = null;
+function initCharSelect() {
+  const grid = $('charGrid');
+  grid.innerHTML = '';
+  CHARS.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'char-card';
+    card.onclick = () => {
+      document.querySelectorAll('.char-card').forEach(x => x.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedChar = c;
+      $('btnStart').style.opacity = '1';
+      $('btnStart').style.pointerEvents = 'auto';
+    };
+    card.innerHTML = `
+      <div class="char-name">${c.name}</div>
+      <div class="char-title">${c.title}</div>
+      <div class="char-desc">${c.desc}</div>
+      <div class="stats-bar">
+        ${statBar('政',c.stats.pol,'pol')}${statBar('武',c.stats.mil,'mil')}
+        ${statBar('智',c.stats.int,'int')}${statBar('德',c.stats.vir,'vir')}${statBar('魅',c.stats.cha,'cha')}
+      </div>
+      <span class="faction-tag ${c.tagClass}">${c.tag}</span>
+      <div style="font-size:.75em;color:#665;margin-top:8px">⚡ ${c.ability}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+function statBar(label, val, cls) {
+  return `<div class="stat"><div class="stat-label">${label}</div><div class="stat-val">${val}</div><div class="stat-bar"><div class="stat-fill ${cls}" style="width:${val}%"></div></div></div>`;
+}
+
+// ===== START GAME =====
+function startGame() {
+  if (!selectedChar) return;
+  G.char = selectedChar;
+  G.hp = selectedChar.hp;
+  G.maxHp = selectedChar.hp;
+  G.gold = selectedChar.gold;
+  G.rep = selectedChar.rep;
+  G.stats = {...selectedChar.stats};
+  G.chapter = 0; G.scene = 0; G.flags = {};
+  G.kills = 0; G.decisions = 0; G.victories = 0;
+  G.factions = { emperor:50, yandang:50, qingliu:50, huangguan:50, military:50, people:50 };
+  // Adjust starting factions based on character
+  if (G.char.id === 'jiajing') { G.factions.emperor=99; G.factions.huangguan=80; }
+  if (G.char.id === 'hairui') { G.factions.qingliu=80; G.factions.people=80; G.factions.yandang=20; }
+  if (G.char.id === 'yansong') { G.factions.yandang=95; G.factions.emperor=70; G.factions.qingliu=15; }
+  if (G.char.id === 'huzongxian') { G.factions.yandang=70; G.factions.military=80; G.factions.people=60; }
+  if (G.char.id === 'lvfang') { G.factions.huangguan=90; G.factions.emperor=85; }
+  if (G.char.id === 'qijiguang') { G.factions.military=90; G.factions.people=70; G.factions.yandang=30; }
+  if (G.char.id === 'shenyishi') { G.factions.yandang=60; G.factions.huangguan=60; G.factions.people=30; }
+  if (G.char.id === 'zhangjuzheng') { G.factions.qingliu=75; G.factions.emperor=40; }
+  showScreen('screen-game');
+  updateUI();
+  runChapter(0);
+}
+
+// ===== STORY ENGINE =====
+function render(content) {
+  $('gameContent').innerHTML = content;
+  $('gameContent').scrollIntoView({behavior:'smooth'});
+}
+
+function scene(title, text) {
+  return `<div class="chapter-title">${title}</div><div class="scene-text">${text}</div>`;
+}
+
+function dlg(speaker, words, type='neutral') {
+  return `<div class="dialogue ${type}"><div class="speaker">${speaker}</div><div class="words">"${words}"</div></div>`;
+}
+
+function choices(options) {
+  let html = '<div class="choices">';
+  options.forEach((o, i) => {
+    html += `<button class="choice-btn" onclick="choose(${G.chapter},${i})">
+      <span class="choice-tag">【${o.tag || '抉择'}】</span>${o.text}
+      ${o.effect ? '<span class="choice-effect">' + o.effect + '</span>' : ''}
+    </button>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function factionPanel() {
+  const names = {emperor:'帝心',yandang:'严党',qingliu:'清流',huangguan:'内廷',military:'军方',people:'民心'};
+  let html = '<div class="faction-panel"><h3>势力关系</h3>';
+  for (let f in G.factions) {
+    let v = G.factions[f], cls = v<20?'hostile':v<40?'cold':v<60?'neutral':v<80?'warm':'ally';
+    let label = v<20?'敌对':v<40?'冷淡':v<60?'中立':v<80?'友善':'同盟';
+    html += `<div class="faction-row"><span class="fname">${names[f]}</span><span class="fval ${cls}">${label} (${v})</span></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function combat(enemy, enemyHp, enemyAtk, reward) {
+  return new Promise(resolve => {
+    let myHp = G.hp, eHp = enemyHp;
+    let log = '';
+    const myAtk = Math.floor((G.stats.mil + G.stats.int) / 3);
+    function round() {
+      // Player attacks
+      let dmg = myAtk + Math.floor(Math.random() * 15);
+      let crit = Math.random() < 0.15;
+      if (G.char.id === 'qijiguang') { dmg = Math.floor(dmg * 1.8); crit = Math.random() < 0.3; }
+      if (crit) dmg = Math.floor(dmg * 2);
+      eHp -= dmg;
+      log += `<p class="${crit?'crit':'dmg'}">你${crit?'暴击':'攻击'}${enemy}，造成 ${dmg} 点伤害！</p>`;
+      if (eHp <= 0) {
+        log += `<p class="info">⚔ ${enemy}被击败！</p>`;
+        G.kills++;
+        G.victories++;
+        return resolve({win:true, log});
+      }
+      // Enemy attacks
+      let eDmg = enemyAtk + Math.floor(Math.random() * 10);
+      let dodge = Math.random() * 100 < G.stats.mil / 3;
+      if (dodge) {
+        log += `<p class="heal">你灵巧闪避了${enemy}的攻击！</p>`;
+      } else {
+        myHp -= eDmg;
+        G.hp = Math.max(0, myHp);
+        log += `<p class="dmg">${enemy}反击，你受到 ${eDmg} 点伤害！</p>`;
+        updateUI();
+        if (myHp <= 0) {
+          log += `<p class="dmg">你被${enemy}击败……</p>`;
+          return resolve({win:false, log});
+        }
+      }
+      setTimeout(round, 100);
+    }
+    round();
+  });
+}
+
+// ===== CHAPTERS =====
+function runChapter(ch) {
+  G.chapter = ch;
+  G.decisions++;
+  updateUI();
+
+  if (ch === 0) chapter0();
+  else if (ch === 1) chapter1();
+  else if (ch === 2) chapter2();
+  else if (ch === 3) chapter3();
+  else if (ch === 4) chapter4();
+  else if (ch === 5) chapter5();
+  else if (ch === 6) chapter6();
+  else endGame();
+}
+
+// ----- Chapter 0: 开局 -----
+function chapter0() {
+  const id = G.char.id;
+  let html = scene('第一回 · 风起云涌', '<p>嘉靖三十九年腊月。大明帝国的国库已经见底，而皇帝要修宫殿、养道士、炼仙丹的银子一文不能少。</p><p>内阁提出"改稻为桑"——将浙江的稻田改种桑树，以丝绸贸易换取白银填补亏空。这一国策，将牵动朝堂之上每一个人的命运。</p>');
+
+  if (id === 'jiajing') {
+    html += dlg('嘉靖帝','朕修了二十年的道，这天下朕不比谁看得清？让他们闹去，朕在幕后看着。','emperor');
+    html += '<p class="scene-text">你端坐在西苑万寿宫的纱幔之后，手拨算盘，将天下收支了然于胸。严嵩与徐阶的争斗、浙江的改稻为桑、倭寇的侵扰……一切都在你的棋盘之上。</p>';
+  } else if (id === 'hairui') {
+    html += dlg('海瑞','当官不为民做主，不如回家卖红薯。','self');
+    html += '<p class="scene-text">你刚被派往浙江淳安任知县。一路所见，饿殍遍野，民不聊生。而上面的命令是——改稻为桑，让百姓把赖以活命的稻田改种桑树。你握紧了拳头。</p>';
+  } else if (id === 'yansong') {
+    html += dlg('严嵩','这天下的官，都是老夫的学生。','villain');
+    html += '<p class="scene-text">你已执掌内阁二十年。门生故吏遍天下，一人之下万人之上。但你知道，皇上的耐心正在耗尽，清流派在暗处磨刀。你必须让改稻为桑成功，否则……</p>';
+  } else if (id === 'huzongxian') {
+    html += dlg('胡宗宪','为臣者，上不负君，下不负民，中间不负良心。难！','official');
+    html += '<p class="scene-text">你是浙直总督，名义上是严嵩的门生。但你心里装着的是浙江百姓和抗倭大业。改稻为桑的圣旨已下，你夹在朝廷与百姓之间，进退维谷。</p>';
+  } else if (id === 'lvfang') {
+    html += dlg('吕芳','做官要三思——思危、思退、思变。','neutral');
+    html += '<p class="scene-text">作为司礼监掌印太监，你是皇帝最亲近的人。十万太监的生死荣辱系于你一身。朝堂上严党与清流斗得你死我活，而你必须在夹缝中求生存。</p>';
+  } else if (id === 'qijiguang') {
+    html += dlg('戚继光','封侯非我意，但愿海波平！','self');
+    html += '<p class="scene-text">倭寇犯境，台州告急！你率戚家军严阵以待。朝堂上的争斗你不关心，你只知道——倭寇不灭，百姓不安。手中长刀已经饥渴难耐！</p>';
+  } else if (id === 'shenyishi') {
+    html += dlg('沈一石','我不过是他们手里的一把刀。刀钝了，就该换了。','neutral');
+    html += '<p class="scene-text">你是江南首富，打着织造局的牌子做丝绸生意。二十年来你给朝廷织了数不清的绸缎，养了一群贪官。现在改稻为桑要低价买百姓的田，这把火最终会烧到谁？</p>';
+  } else if (id === 'zhangjuzheng') {
+    html += dlg('张居正','时机未到。蛰伏，是为了更好地出击。','official');
+    html += '<p class="scene-text">你在兵部侍郎的位置上韬光养晦。裕王对你信赖有加，但现在严嵩当权，你只能等。改稻为桑的风暴正在酝酿，这正是观察各方棋路的好机会。</p>';
+  }
+
+  html += choices([
+    {tag:'进取',text:'主动出击，抢先布局改稻为桑之事',effect:'声望+5，卷入旋涡'},
+    {tag:'观望',text:'静观其变，先看看各方的动向',effect:'智谋判定，收集情报'},
+    {tag:'交际',text:'先拜访关键人物，建立关系网',effect:'魅力判定，结交盟友'},
+    {tag:'备战',text:'不管朝堂，先处理眼前最紧迫之事',effect:'因角色而异'}
+  ]);
+  html += factionPanel();
+  render(html);
+}
+
+function choose(ch, idx) {
+  if (ch === 0) handleCh0(idx);
+  else if (ch === 1) handleCh1(idx);
+  else if (ch === 2) handleCh2(idx);
+  else if (ch === 3) handleCh3(idx);
+  else if (ch === 4) handleCh4(idx);
+  else if (ch === 5) handleCh5(idx);
+  else if (ch === 6) handleCh6(idx);
+}
+
+function handleCh0(idx) {
+  G.flags.ch0 = idx;
+  if (idx === 0) { modStat('rep', 5); modFaction('emperor', 5); G.flags.aggressive = true; }
+  else if (idx === 1) {
+    if (checkStat('int', 50)) { notify('你洞察到了各方的暗流涌动', 'gain'); G.flags.intel = true; }
+    else notify('局势太复杂，你没能看清全貌', 'loss');
+  }
+  else if (idx === 2) {
+    if (checkStat('cha', 50)) { modFaction(G.char.faction === 'yandang' ? 'yandang' : 'qingliu', 10); G.flags.allies = true; notify('你成功结交了几位关键人物', 'gain'); }
+    else { modStat('gold', -20); notify('交际花费不少，收效甚微', 'loss'); }
+  }
+  else { // 备战
+    if (G.char.id === 'qijiguang') { modStat('hp', 10); G.flags.prepared = true; notify('戚家军整装待发！', 'gain'); }
+    else if (G.char.id === 'hairui') { modFaction('people', 10); G.flags.prepared = true; notify('你开始走访民间，了解疾苦', 'gain'); }
+    else { modStat('rep', 3); G.flags.prepared = true; }
+  }
+  runChapter(1);
+}
+
+// ----- Chapter 1: 改稻为桑 -----
+function chapter1() {
+  const id = G.char.id;
+  let html = scene('第二回 · 改稻为桑', '<p>嘉靖四十年春。改稻为桑的国策正式推行。浙江巡抚衙门下令各府各县限期完成。然而桑苗尚未成活，百姓口粮已断。</p><p>新安江两岸，暗流涌动。</p>');
+
+  if (id === 'jiajing') {
+    html += dlg('黄锦','皇上，浙江急报——百姓抗拒改稻为桑，各县民怨沸腾。','neutral');
+    html += dlg('嘉靖帝','朕要的是银子。怎么弄来的，朕不管。','emperor');
+  } else if (id === 'hairui') {
+    html += dlg('王用汲','刚峰兄，上面的意思是必须改。你要是硬顶，怕是乌纱不保。','official');
+    html += dlg('海瑞','乌纱算什么？百姓的命算什么！','self');
+    html += '<p class="scene-text">淳安县内，饥民遍地。上面要你强行推行改稻为桑，可田里的稻子是百姓活命的根。你站在县衙大堂，面前跪满了请愿的百姓。</p>';
+  } else if (id === 'yansong') {
+    html += dlg('严世蕃','爹，浙江那边出了岔子。那个海瑞，竟然敢抗旨不改。','villain');
+    html += '<p class="scene-text">改稻为桑是你向皇上保证的国策。如果失败，清流派必然借此发难。严世蕃建议直接撤了海瑞，但这样做会不会惹来更大的麻烦？</p>';
+  } else if (id === 'huzongxian') {
+    html += '<p class="scene-text">你坐镇杭州，面前是两份急报：一份是朝廷催促改稻为桑的廷寄，一份是淳安县百姓流离失所的呈报。戚继光在前线催要军粮，而浙江的粮仓已经见底。</p>';
+    html += dlg('胡宗宪','这个局，怎么走都是死。','official');
+  } else if (id === 'qijiguang') {
+    html += '<p class="scene-text">台州前线。斥候来报，倭寇三千余众在桃渚一带集结，似有大举进犯之意。然而军粮只够三日，朝廷的补给遥遥无期。</p>';
+    html += dlg('戚继光','粮草没到，仗照打！饿着肚子也要把倭寇赶下海！','self');
+  } else {
+    html += '<p class="scene-text">改稻为桑的风暴席卷浙江，各方势力蠢蠢欲动。作为' + G.char.name + '，你被卷入了这场权力的漩涡。</p>';
+  }
+
+  html += choices([
+    {tag:'强硬',text:'坚决推行/抵制——不惜一切代价贯彻自己的立场',effect:'声望变动大，树敌'},
+    {tag:'迂回',text:'用计谋寻找折中方案，两面周旋',effect:'智谋判定，可能两全'},
+    {tag:'联合',text:'联络同道中人，集合力量行动',effect:'阵营好感变动'},
+    {tag:'冒险',text:'铤而走险——采取一个大胆的非常规行动',effect:'高风险高回报'}
+  ]);
+  render(html);
+}
+
+function handleCh1(idx) {
+  G.flags.ch1 = idx;
+  const id = G.char.id;
+  if (idx === 0) { // 强硬
+    if (id === 'hairui' || id === 'huzongxian') {
+      modFaction('people', 15); modFaction('yandang', -15); modStat('rep', 10);
+      notify('你的强硬立场赢得了民心，却激怒了严党', 'event');
+    } else if (id === 'yansong' || id === 'jiajing') {
+      modFaction('people', -10); modFaction('yandang', 10); modStat('rep', 5);
+    } else {
+      modStat('rep', 5); modFaction('people', 5);
+    }
+  } else if (idx === 1) { // 迂回
+    if (checkStat('int', 60)) {
+      notify('你巧妙地找到了一个折中之策', 'gain');
+      modStat('rep', 5); G.flags.compromise = true;
+    } else {
+      notify('计谋失败，两面不讨好', 'loss');
+      modFaction('yandang', -5); modFaction('qingliu', -5);
+    }
+  } else if (idx === 2) { // 联合
+    modFaction(id==='yansong'?'yandang':'qingliu', 15);
+    G.flags.allied = true;
+    notify('你成功组建了一个小联盟', 'gain');
+  } else { // 冒险
+    if (Math.random() < 0.5) {
+      modStat('rep', 15); modStat('gold', 100);
+      G.flags.gambit = true;
+      notify('你的大胆行动出人意料地成功了！', 'gain');
+    } else {
+      modStat('hp', -20); modStat('rep', -10);
+      notify('冒险失败，你付出了沉重代价', 'loss');
+    }
+  }
+  runChapter(2);
+}
+
+// ----- Chapter 2: 毁堤淹田 -----
+function chapter2() {
+  let html = scene('第三回 · 毁堤淹田','<p>一声闷响，新安江大堤决口。洪水淹没了建德、淳安两县的万亩良田。</p><p>这不是天灾——是有人毁堤淹田，借洪水逼百姓贱卖土地，好改种桑树！</p><p>九万百姓流离失所，哭声震天。</p>');
+
+  const id = G.char.id;
+  if (id === 'hairui') {
+    html += dlg('海瑞','谁干的？！查！查到天边也要查出来！','self');
+    html += '<p class="scene-text">你站在决口的大堤上，看着浑浊的洪水吞没村庄，愤怒到浑身发抖。县衙里的师爷告诉你，这是郑泌昌和何茂才的手笔——毁堤淹田，贱买良田。</p>';
+  } else if (id === 'jiajing') {
+    html += dlg('吕芳','皇上，浙江出大事了。新安江决堤，淹了九万亩田。','neutral');
+    html += dlg('嘉靖帝','是天灾还是人祸？','emperor');
+    html += dlg('吕芳','……恐怕是人祸。','neutral');
+  } else if (id === 'qijiguang') {
+    html += '<p class="scene-text">洪水的消息传到前线。军粮更加无望了。你看着面黄肌瘦的士兵们，拳头捏得咯咯作响。前方是倭寇，后方是洪水。</p>';
+    html += dlg('戚继光','传令下去，杀战马充军粮！打完这仗再说！','self');
+  } else {
+    html += '<p class="scene-text">毁堤淹田的消息如同炸雷，震动了从浙江到北京的每一个角落。这把火，终于烧起来了。</p>';
+  }
+
+  html += choices([
+    {tag:'正义',text:'追查真凶，为民请命——哪怕得罪权贵',effect:'清廉判定，民心+，严党-'},
+    {tag:'利用',text:'利用这场灾难，为自己的阵营谋取政治利益',effect:'政治判定，声望变动'},
+    {tag:'救灾',text:'先不管谁干的，救人要紧！全力赈灾',effect:'银两-，民心+，生命-'},
+    {tag:'暗中',text:'暗中收集证据，等待最佳时机出手',effect:'智谋判定，获取关键证据'}
+  ]);
+  render(html);
+}
+
+function handleCh2(idx) {
+  G.flags.ch2 = idx;
+  if (idx === 0) {
+    if (checkStat('vir', 50)) {
+      modFaction('people', 20); modFaction('yandang', -20); modStat('rep', 15);
+      G.flags.justice = true;
+      notify('你查出了毁堤淹田的真凶！', 'gain');
+    } else {
+      modFaction('yandang', -10); modStat('hp', -15);
+      notify('真凶势力太大，你遭到了报复', 'loss');
+    }
+  } else if (idx === 1) {
+    modStat('rep', 10); modFaction('emperor', 5);
+    if (G.char.id === 'yansong') modFaction('yandang', 10);
+    else modFaction('qingliu', 10);
+    G.flags.political = true;
+  } else if (idx === 2) {
+    modStat('gold', -80); modStat('hp', -10); modFaction('people', 25);
+    G.flags.relief = true;
+    notify('你散尽家财赈济灾民，百姓感恩戴德', 'gain');
+  } else {
+    if (checkStat('int', 65)) {
+      G.flags.evidence = true;
+      notify('你拿到了郑泌昌何茂才毁堤淹田的铁证！', 'gain');
+    } else {
+      notify('证据被人销毁了一部分', 'loss');
+    }
+  }
+  runChapter(3);
+}
+
+// ----- Chapter 3: 台州大战 / 沈一石之死 -----
+function chapter3() {
+  let html = scene('第四回 · 血战台州', '<p>倭寇趁浙江大乱，三千精锐登陆台州。烧杀抢掠，无恶不作。百姓被劫为人盾，倭刀之下尸横遍野。</p><p>与此同时，沈一石的账册被朝廷查抄——二十年来他替严党输送了多少银子，全在账上。</p>');
+
+  const id = G.char.id;
+  if (id === 'qijiguang') {
+    html += dlg('戚继光','鸳鸯阵，列阵！今日不是你死就是我亡！','self');
+    html += '<p class="scene-text">你率戚家军迎战倭寇！敌众我寡，但你的鸳鸯阵天下无双。狼筅手、长枪手、短刀手配合精妙，倭寇虽悍勇，却在阵法前束手无策。</p>';
+  } else if (id === 'shenyishi') {
+    html += dlg('沈一石','知我者谓我心忧，不知我者谓我何求。','neutral');
+    html += '<p class="scene-text">朝廷要抄你的家了。二十年的账册，记录了你与严党、织造局的每一笔交易。你看着那些账本，手在发抖——这些东西一旦呈上去，严嵩完了，你也完了。</p>';
+  } else {
+    html += '<p class="scene-text">台州战事与沈一石案同时爆发。朝堂与战场，两条战线同时燃烧。</p>';
+  }
+
+  // Combat for military characters
+  if (id === 'qijiguang' || id === 'huzongxian' || (G.flags.prepared && G.stats.mil > 60)) {
+    html += `<div class="combat-arena"><div class="combat-title">⚔ 台州大战 ⚔</div>
+      <div class="combatants"><div class="combatant"><div class="name ally">${G.char.name}</div></div>
+      <div class="vs">VS</div><div class="combatant"><div class="name enemy">倭寇大将 · 井上十四郎</div></div></div>
+      <div id="combatLog" class="combat-log"><p class="info">战斗开始！</p></div></div>`;
+    html += choices([
+      {tag:'猛攻',text:'全军突击！以鸳鸯阵正面突破敌阵',effect:'武力判定，高伤害'},
+      {tag:'奇袭',text:'分兵包抄，断其退路后再发动总攻',effect:'智谋判定，可全歼'},
+      {tag:'救民',text:'先救被劫持的百姓，再与倭寇决战',effect:'民心+，战斗更艰难'},
+      {tag:'火攻',text:'用火箭焚烧倭寇战船，断其归路',effect:'银两-，可能火烧连营'}
+    ]);
+  } else {
+    html += choices([
+      {tag:'调查',text:'深查沈一石账册，揪出幕后黑手',effect:'智谋判定，获取证据'},
+      {tag:'周旋',text:'在各方势力间周旋，控制事态走向',effect:'政治判定，声望变动'},
+      {tag:'支援',text:'想办法给前线送去粮草军需',effect:'银两-100，军方好感+'},
+      {tag:'自保',text:'这场风暴太大了，先保住自己再说',effect:'安全但可能错失良机'}
+    ]);
+  }
+  render(html);
+}
+
+async function handleCh3(idx) {
+  G.flags.ch3 = idx;
+  const id = G.char.id;
+  const isCombat = id === 'qijiguang' || id === 'huzongxian' || (G.flags.prepared && G.stats.mil > 60);
+
+  if (isCombat) {
+    if (idx === 0) { // 猛攻
+      const result = await combat('井上十四郎', 80, 12, {rep:15,gold:100});
+      $('combatLog').innerHTML = result.log;
+      if (result.win) {
+        modStat('rep', 20); modFaction('military', 15); modFaction('emperor', 10);
+        notify('台州大捷！倭寇被杀得片甲不留！', 'gain');
+        G.flags.taizhou_win = true;
+      } else {
+        modStat('rep', -10);
+        notify('战事不利，被迫撤退', 'loss');
+      }
+    } else if (idx === 1) { // 奇袭
+      if (checkStat('int', 60)) {
+        modStat('rep', 25); modFaction('military', 20); G.kills += 3;
+        G.flags.taizhou_win = true;
+        notify('包抄成功！倭寇全军覆没！', 'gain');
+      } else {
+        modStat('hp', -25);
+        notify('包抄失败，遭到反伏击！', 'loss');
+      }
+    } else if (idx === 2) { // 救民
+      modFaction('people', 25); modStat('hp', -15);
+      G.flags.saved_people = true;
+      notify('你救出了被劫持的百姓，但自己负伤了', 'event');
+    } else { // 火攻
+      modStat('gold', -50);
+      if (Math.random() < 0.7) {
+        G.flags.taizhou_win = true; G.kills += 2;
+        modStat('rep', 20);
+        notify('火烧倭寇战船！大获全胜！', 'gain');
+      } else {
+        modStat('hp', -20);
+        notify('风向突变，火势反噬！', 'loss');
+      }
+    }
+  } else {
+    if (idx === 0) { // 调查
+      if (checkStat('int', 55)) {
+        G.flags.shen_evidence = true;
+        modStat('rep', 10);
+        notify('沈一石的账册揭露了惊天秘密！', 'gain');
+      } else notify('账册太多，一时理不清头绪', 'loss');
+    } else if (idx === 1) { // 周旋
+      if (checkStat('pol', 60)) {
+        modStat('rep', 10); modFaction('emperor', 5);
+        notify('你巧妙地引导了事态的走向', 'gain');
+      } else {
+        modFaction('yandang', -10); modFaction('qingliu', -5);
+        notify('各方都对你产生了怀疑', 'loss');
+      }
+    } else if (idx === 2) { // 支援
+      modStat('gold', -100); modFaction('military', 20);
+      G.flags.supplied = true;
+      notify('粮草送达前线！戚家军士气大振！', 'gain');
+    } else { // 自保
+      modStat('hp', 10);
+      notify('你避开了风暴中心', 'event');
+    }
+  }
+  setTimeout(() => runChapter(4), 800);
+}
+
+// ----- Chapter 4: 严党倒台 -----
+function chapter4() {
+  let html = scene('第五回 · 严党倒台', '<p>嘉靖四十一年。沈一石的账册、浙江的贪腐案、毁堤淹田的真相……所有的炸雷同时引爆。</p><p>严嵩，这位执掌内阁二十年的首辅，终于走到了悬崖边上。</p>');
+
+  const id = G.char.id;
+  if (id === 'yansong') {
+    html += dlg('严世蕃','爹！他们要抄咱家！','villain');
+    html += dlg('严嵩','……抄吧。二十年的风光，够了。','villain');
+    html += '<p class="scene-text">你知道大势已去。皇上要用你的人头平息众怒。但你还有最后一步棋——是束手就擒，还是殊死一搏？</p>';
+  } else if (id === 'jiajing') {
+    html += dlg('嘉靖帝','严嵩老了，该换人了。但换谁？','emperor');
+    html += '<p class="scene-text">严嵩的罪状堆成了山，但你不能让他倒得太快——否则朝堂失衡，清流派独大，你这个皇帝反而被架空。你需要一个精妙的时间差。</p>';
+  } else {
+    html += '<p class="scene-text">严党即将倒台的消息传遍朝野。每个人都在计算自己的得失——站队的时刻到了。</p>';
+  }
+
+  html += choices([
+    {tag:'落井下石',text:'趁严党衰败，狠狠踩上一脚',effect:'严党-20，清流+10，可能遭报复'},
+    {tag:'雪中送炭',text:'在严党危难之际伸出援手——他日必有回报',effect:'严党+20，清流-15，冒大险'},
+    {tag:'审时度势',text:'不急着站队，等尘埃落定再表态',effect:'安全但收益有限'},
+    {tag:'借势上位',text:'利用权力真空，为自己谋取更大的位置',effect:'政治判定，可能飞黄腾达'}
+  ]);
+  render(html);
+}
+
+function handleCh4(idx) {
+  G.flags.ch4 = idx;
+  if (idx === 0) {
+    modFaction('yandang', -20); modFaction('qingliu', 10); modStat('rep', 10);
+    if (G.char.id === 'yansong') { modStat('hp', -30); notify('你对自己的阵营倒戈了……代价惨重', 'loss'); }
+    else notify('严党恨你入骨，但清流派对你刮目相看', 'event');
+  } else if (idx === 1) {
+    modFaction('yandang', 20); modFaction('qingliu', -15);
+    if (G.char.id === 'yansong') { modStat('hp', 10); notify('你的门生们重新燃起了希望', 'gain'); }
+    else notify('你的这步棋很危险，但也许会有意想不到的回报', 'event');
+    G.flags.saved_yan = true;
+  } else if (idx === 2) {
+    modStat('rep', 3);
+    notify('你谨慎地避开了站队', 'event');
+  } else {
+    if (checkStat('pol', 70)) {
+      modStat('rep', 20); modStat('gold', 200);
+      G.flags.promoted = true;
+      notify('你在权力洗牌中青云直上！', 'gain');
+    } else {
+      modStat('rep', -10); modFaction('emperor', -10);
+      notify('你的野心被人看穿，反遭打压', 'loss');
+    }
+  }
+  runChapter(5);
+}
+
+// ----- Chapter 5: 海瑞上疏 -----
+function chapter5() {
+  let html = scene('第六回 · 治安疏', '<p>嘉靖四十五年。严党已倒，但大明的痼疾并未痊愈。皇帝依旧沉迷修道，国库依旧空虚，百姓依旧困苦。</p><p>海瑞买好了棺材，写下了那封震动天下的《治安疏》——直言嘉靖帝的过失，这是赌上性命的最后一搏。</p>');
+
+  const id = G.char.id;
+  if (id === 'hairui') {
+    html += dlg('海瑞','臣以命相谏！嘉靖嘉靖，家家皆净而无财用也！','self');
+    html += '<p class="scene-text">你已经买好了棺材，遣散了家人。这封奏疏一旦递上去，你必死无疑。但如果不说，谁来说？你提起笔，笔尖在发抖。</p>';
+  } else if (id === 'jiajing') {
+    html += dlg('黄锦','皇上……有、有人骂您。','neutral');
+    html += dlg('嘉靖帝','拿来！','emperor');
+    html += '<p class="scene-text">你读着海瑞的奏疏，气得浑身发抖。"嘉靖嘉靖，家家皆净"——这个小小的七品知县，竟敢如此辱骂天子！但你越读越沉默……因为他说的每一句，都是事实。</p>';
+  } else {
+    html += '<p class="scene-text">海瑞上疏的消息传遍朝野。有人敬佩，有人恐惧，有人冷笑。在这个关键时刻，你的态度将决定许多人的命运——包括你自己的。</p>';
+  }
+
+  html += choices([
+    {tag:'支持',text:'公开支持海瑞——他说的是对的，有人必须站出来',effect:'清廉判定，帝心-，民心+，可能入狱'},
+    {tag:'反对',text:'上疏弹劾海瑞——以下犯上，罪不可赦',effect:'帝心+，民心-，声望变动'},
+    {tag:'营救',text:'暗中设法营救海瑞，不让他死在诏狱',effect:'智谋判定，冒杀头风险'},
+    {tag:'旁观',text:'这是海瑞和皇帝之间的事，不掺和',effect:'安全，但错失历史转折点'}
+  ]);
+  html += factionPanel();
+  render(html);
+}
+
+function handleCh5(idx) {
+  G.flags.ch5 = idx;
+  const id = G.char.id;
+  if (idx === 0) {
+    modFaction('emperor', -20); modFaction('people', 20); modFaction('qingliu', 15);
+    if (id === 'hairui') {
+      modStat('rep', 30);
+      notify('你的《治安疏》震动天下！但你被打入诏狱……', 'event');
+      G.flags.imprisoned = true;
+    } else {
+      if (checkStat('vir', 60)) {
+        modStat('rep', 20);
+        notify('你的正义之举赢得了万民敬仰！', 'gain');
+      } else {
+        modStat('hp', -25); modStat('rep', -5);
+        notify('你被皇帝廷杖四十！', 'loss');
+      }
+    }
+  } else if (idx === 1) {
+    modFaction('emperor', 15); modFaction('people', -15); modFaction('qingliu', -20);
+    modStat('rep', -10);
+    notify('你站在了皇帝一边，但良心难安', 'event');
+  } else if (idx === 2) {
+    if (checkStat('int', 70)) {
+      G.flags.saved_hairui = true;
+      modFaction('qingliu', 20); modFaction('people', 15);
+      notify('你暗中运作，保住了海瑞一条命', 'gain');
+    } else {
+      modStat('hp', -20); modFaction('emperor', -15);
+      notify('营救计划败露！你也被牵连了！', 'loss');
+    }
+  } else {
+    notify('你选择了沉默。历史不会记住旁观者。', 'event');
+  }
+  runChapter(6);
+}
+
+// ----- Chapter 6: 大结局 -----
+function chapter6() {
+  let html = scene('第七回 · 天崩地裂', '<p>嘉靖四十五年腊月。嘉靖帝的身体已经油尽灯枯。四十五年的帝王生涯，走到了尽头。</p><p>裕王即将登基，新旧交替之际，是最后的权力洗牌。每个人都在为即将到来的新时代做最后的准备。</p><p>而你，站在这个历史的十字路口，将做出最后的抉择。</p>');
+
+  const id = G.char.id;
+  if (id === 'jiajing') {
+    html += dlg('嘉靖帝','朕……修了一辈子的道，到头来……','emperor');
+    html += '<p class="scene-text">你躺在龙床上，感到生命正在流逝。四十五年来你操控着这个帝国，如今要把它交出去了。你最后的遗诏，将决定大明未来数十年的命运。</p>';
+  } else {
+    html += '<p class="scene-text">皇帝驾崩的消息即将传出。新帝登基，朝堂将迎来一次彻底的大换血。你必须在最后关头做出选择——是争，是退，还是赌上一切？</p>';
+  }
+
+  html += choices([
+    {tag:'争霸',text:'最后一搏！在新朝中争取最高的权位',effect:'政治+武力判定，成王败寇'},
+    {tag:'布局',text:'不争一时之位，为十年后的大业埋下伏笔',effect:'智谋判定，长远收益'},
+    {tag:'为民',text:'利用这个机会推动变法，造福苍生',effect:'清廉判定，青史留名'},
+    {tag:'归隐',text:'功成身退，保全自身，归隐山林',effect:'安全结局，放弃一切'}
+  ]);
+  render(html);
+}
+
+function handleCh6(idx) {
+  G.flags.ch6 = idx;
+  if (idx === 0) {
+    if (checkStat('pol', 75) && G.rep > 60) {
+      G.flags.ending = 'power';
+      modStat('rep', 30);
+      notify('你在新朝中位极人臣！', 'gain');
+    } else {
+      G.flags.ending = 'fall';
+      modStat('hp', -40);
+      notify('争权失败，你被新帝清洗……', 'loss');
+    }
+  } else if (idx === 1) {
+    if (checkStat('int', 70)) {
+      G.flags.ending = 'mastermind';
+      modStat('rep', 15);
+      notify('你的布局精妙绝伦，十年后必将开花结果', 'gain');
+    } else {
+      G.flags.ending = 'forgotten';
+      notify('你的布局被人识破了', 'loss');
+    }
+  } else if (idx === 2) {
+    if (checkStat('vir', 60) && G.factions.people > 50) {
+      G.flags.ending = 'reform';
+      modStat('rep', 25); modFaction('people', 30);
+      notify('你推动了一系列利国利民的改革！', 'gain');
+    } else {
+      G.flags.ending = 'martyr';
+      modStat('hp', -20);
+      notify('改革遭到既得利益者的疯狂反扑', 'loss');
+    }
+  } else {
+    G.flags.ending = 'hermit';
+    notify('你脱下官袍，骑一头毛驴，消失在了夕阳中', 'event');
+  }
+  setTimeout(endGame, 1000);
+}
+
+// ===== END GAME =====
+function endGame() {
+  showScreen('screen-end');
+  const ending = G.flags.ending || 'neutral';
+  const id = G.char.id;
+
+  // Calculate score
+  let score = G.rep + Math.floor(G.gold / 10) + G.victories * 20 + G.kills * 5;
+  score += Object.values(G.factions).reduce((a,b) => a + b, 0) / 6;
+  score = Math.floor(score);
+
+  const endings = {
+    power: {title:'权倾天下',desc:'你在新朝中位极人臣，权倾朝野。但高处不胜寒，你能守住多久？',color:'#d4af37'},
+    fall: {title:'折戟沉沙',desc:'争权夺利的游戏中，你成了输家。但大明的历史上，永远留下了你的名字。',color:'#e55'},
+    mastermind: {title:'幕后棋手',desc:'你不在棋盘上，你就是棋盘。十年后的万历中兴，有你埋下的每一颗种子。',color:'#5ae'},
+    forgotten: {title:'湮没无闻',desc:'你的计谋没能瞒过所有人。但你活了下来，这就是最大的胜利。',color:'#888'},
+    reform: {title:'青史留名',desc:'你推动的改革惠及千万百姓。后人翻开史书，你的名字如同启明星。',color:'#5e5'},
+    martyr: {title:'虽败犹荣',desc:'改革的道路充满荆棘。你倒下了，但你点燃的火种不会熄灭。',color:'#ea5'},
+    hermit: {title:'逍遥世外',desc:'你放下了一切执念，归隐山林。青山绿水间，煮酒烹茶，此生无憾。',color:'#aea'},
+    neutral: {title:'大幕落下',desc:'嘉靖时代结束了。你在这场大戏中扮演了自己的角色，不多不少。',color:'#aaa'}
+  };
+
+  const e = endings[ending];
+  let html = `
+    <h2 style="color:${e.color}">${e.title}</h2>
+    <p style="font-size:1.3em;color:#d4af37;margin:20px 0">${G.char.name} · ${G.char.title}</p>
+    <p style="margin:20px 40px;line-height:2">${e.desc}</p>
+    <div class="score">${score}</div>
+    <p style="color:#665">最终评分</p>
+    <div style="margin:30px auto;max-width:400px;text-align:left">
+      <div class="faction-row"><span class="fname">声望</span><strong style="color:#d4af37">${G.rep}</strong></div>
+      <div class="faction-row"><span class="fname">存银</span><strong style="color:#d4af37">${G.gold} 两</strong></div>
+      <div class="faction-row"><span class="fname">击杀</span><strong style="color:#e55">${G.kills}</strong></div>
+      <div class="faction-row"><span class="fname">胜利</span><strong style="color:#5e5">${G.victories}</strong></div>
+      <div class="faction-row"><span class="fname">抉择</span><strong style="color:#5ae">${G.decisions}</strong></div>
+    </div>
+    ${factionPanel()}
+    <div style="margin-top:20px;padding:20px;background:#111;border-radius:8px;text-align:left;line-height:2;font-size:.9em">
+      <p style="color:#d4af37;margin-bottom:8px">你的历史足迹：</p>
+      ${G.flags.justice ? '<p>✦ 你追查了毁堤淹田的真凶</p>' : ''}
+      ${G.flags.taizhou_win ? '<p>✦ 你参与了台州大捷</p>' : ''}
+      ${G.flags.saved_people ? '<p>✦ 你救出了被倭寇劫持的百姓</p>' : ''}
+      ${G.flags.relief ? '<p>✦ 你散尽家财赈济灾民</p>' : ''}
+      ${G.flags.saved_hairui ? '<p>✦ 你暗中营救了海瑞</p>' : ''}
+      ${G.flags.saved_yan ? '<p>✦ 你在严党危难时伸出援手</p>' : ''}
+      ${G.flags.promoted ? '<p>✦ 你在权力洗牌中青云直上</p>' : ''}
+      ${G.flags.imprisoned ? '<p>✦ 你因上疏被打入诏狱</p>' : ''}
+      ${G.flags.evidence ? '<p>✦ 你收集到了关键证据</p>' : ''}
+      ${G.flags.gambit ? '<p>✦ 你的一次冒险大获成功</p>' : ''}
+      <p style="color:#443;margin-top:12px">每个角色、每次选择都通向不同的结局。换个角色再来一次？</p>
+    </div>
+    <div class="btn-center" style="margin-top:30px">
+      <button class="btn" onclick="location.reload()">再 来 一 局</button>
+    </div>
+    <p style="color:#332;margin-top:20px;font-size:.8em">基于《大明王朝1566》知识库 · 沉浸式权谋RPG</p>
+  `;
+  $('endContent').innerHTML = html;
+}
+
+// ===== INIT =====
+initCharSelect();
+</script>
+</body>
+</html>
